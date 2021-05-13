@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selección C&E: datos personales</title>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet">
+    <style>
+        .w3-montserrat {
+            font-family: 'Montserrat', sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="w3-container w3-montserrat w3-center w3-light-grey w3-border w3-round">
+        <img src="/media/Logo Causa & Efecto.png" width="240" height="135">
+    </div>
+    <div class="w3-row-padding w3-padding-16 w3-montserrat">
+        <div class="w3-container w3-half">
+            <video id="video" class="w3-col w3-round-xlarge w3-border" src="/media/aceptar.mp4" autoplay controls
+                controlsList="nodownload nofullscreen"></video>
+        </div>
+        <div class="w3-container w3-half w3-center">
+            <form id="form" class="w3-container w3-hover-light-grey w3-round w3-padding-16" style="display: none">
+                <label id="dataLabel" class="w3-padding-16" style="display: block">N° de documento</label>
+                <input type="text" id="dataInputpid"
+                    class="w3-input w3-border w3-round w3-animate-input w3-margin-bottom" onkeyup="sendoffpid()"
+                    style="width:10%; display: none" placeholder="...">
+                <input type="text" id="dataInputName"
+                    class="w3-input w3-border w3-round w3-animate-input w3-margin-bottom" onkeyup="sendoffName()"
+                    style="width:10%; display: none" placeholder="...">
+                <input type="text" id="dataInputApp"
+                    class="w3-input w3-border w3-round w3-animate-input w3-margin-bottom" onkeyup="sendoffapp()"
+                    style="width:10%; display: none" placeholder="...">
+                <input type="text" id="dataInputOcc"
+                    class="w3-input w3-border w3-round w3-animate-input w3-margin-bottom" onkeyup="sendoffocc()"
+                    style="width:10%; display: none" placeholder="...">
+                <input type="text" id="dataInputHand"
+                    class="w3-input w3-border w3-round w3-animate-input w3-margin-bottom" onkeyup="sendoffHand()"
+                    style="width:10%; display: none" placeholder="...">
+                <input type="text" id="dataInputGender"
+                    class="w3-input w3-border w3-round w3-animate-input w3-margin-bottom" onkeyup="sendoffGender()"
+                    style="width:10%; display: none" placeholder="...">
+                <input type="text" id="dataInputPhone"
+                    class="w3-input w3-border w3-round w3-animate-input w3-margin-bottom" onkeyup="sendoffPhone()"
+                    style="width:10%; display: none" placeholder="...">
+                <button type="button" id="text" style="display: none">Escribiendo<i
+                        class="w3-margin-left fa fa-keyboard-o"></i></button>
+                <button type="button" id="audio" style="display: none">Hablando<i
+                        class="w3-margin-left fa fa-microphone"></i></button>
+                <button type="button" id="talk" style="display: none">Grabar<i
+                        class="w3-margin-left fa fa-microphone"></i></button>
+                <button type="button" id="submit" style="display: none" onclick="saveData(event)">Enviar<i
+                        class="w3-margin-left fa fa-paper-plane-o"></i></button>
+            </form>
+            <div class="w3-container w3-padding-16 w3-center">
+                <p id="messages" class="w3-padding-16" style="display: none">Párale bolas al video</p>
+                <p id="messagewrite" class="w3-padding-16"></p>
+                <button type="button" id="text2" style="display: none">Escribiendo<i
+                        class="w3-margin-left fa fa-keyboard-o"></i></button>
+                <button type="button" id="accept" class="w3-margin" style="display: none">Aceptar<i
+                        class="w3-margin-left fa fa-check-circle"></i></button>
+                <a href="https://www.causayefecto.com.co/t%C3%A9rminos" id="link" class="w3-padding-16"
+                    style="display: none" target="_blank">Pulsa aquí para
+                    ver nuestra política de datos</a>
+                <button type="button" id="continueButton" style="display: none">Continuar<i
+                        class="w3-margin-left fa fa-hand-o-right"></i></button>
+            </div>
+        </div>
+    </div>
+
+</body>
+<script src="script.js"></script>
+
+</html>

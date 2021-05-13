@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SELECCIÓN C&E: entrevista</title>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet">
+
+    <style>
+        #videodiv {
+            display: flex;
+        }
+
+        canvas {
+            position: absolute;
+        }
+
+        .w3-montserrat {
+            font-family: "Montserrat", Sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="w3-container w3-montserrat w3-center w3-light-grey w3-border w3-round">
+        <img src="/media/Logo Causa & Efecto.png" width="240" height="135">
+    </div>
+    <div class="w3-row-padding w3- w3-padding-16">
+        <div class="w3-container w3-half">
+            <video id="videoquestion" class="w3-col w3-round-xlarge w3-border" src="/media/entrevista.mp4" autoplay
+                controls controlsList="nodownload nofullscreen"></video>
+        </div>
+        <div id="videodiv" class="w3-container w3-half">
+            <video id="video" width="640" height="360" class="w3-col w3-round-xlarge" style="display: none"></video>
+        </div>
+    </div>
+    <div class="w3-container w3-center w3-padding-16 w3-montserrat">
+        <button id="btnStart" disabled>Responder<i class="w3-margin-left fa fa-video-camera"></i></button>
+        <button id="btnStop" disabled>Detener<i class="w3-margin-left fa fa-stop-circle"></i></button>
+        <button id="restartButton" style="display: none">Registrarse<i
+                class="w3-margin-left fa fa-user-plus"></i></button>
+        <button id="signupButton" style="display: none">Iniciar sesión<i
+                class="w3-margin-left fa fa-sign-in"></i></button>
+    </div>
+</body>
+<script src="face-api.min.js"></script>
+<script>
+    Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri('/weights'),
+        faceapi.nets.ssdMobilenetv1.loadFromUri('/weights'),
+        faceapi.nets.faceExpressionNet.loadFromUri('/weights'),
+        faceapi.nets.ageGenderNet.loadFromUri('/weights')
+    ]).then(startVideo)
+
+    const video = document.getElementById('video');
+    const videoQuestion = document.getElementById('videoquestion');
+    div = document.getElementById('videodiv');
+    var getEmotions = false;
+    var videoLbel = "question";
+    var stamp;
+
+    const dataEmotions = {
+        neutral: undefined,
+        happy: undefined,
+        angry: undefined,
+        fearful: undefined,
+        surprised: undefined,
+        sad: undefined,
+        disgusted: undefined
+    }
+
+    let constraintObj = {
+        audio: false,
+        video: { width: 640, height: 360 }
+
+    };
+
+    async function startVideo() {
+        /*
+        //handle older browsers that might implement getUserMedia in some way
+        if (navigator.mediaDevices === undefined) {
+            navigator.mediaDevices = {};
+            navigator.mediaDevices.getUserMedia = function (constraintObj) {
+                let getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+                if (!getUserMedia) {
+                    return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+                }
+                return new Promise(function (resolve, reject) {
+                    getUserMedia.call(navigator, constraintObj, resolve, reject);
+                });
+            }
+        } else {
+            navigator.mediaDevices.enumerateDevices()
+                .then(devices => {
+                    devices.forEach(device => {
+                        console.log(device.kind.toUpperCase(), device.label);
+                        //, device.deviceId
+                    })
+                })
+                .catch(err => {
+                    console.log(err.name, err.message);
+                })
+        }
+        */
+        // Stamp for each user: for webApp works as a multiuser app 
+        const response = await fetch('/allmedia');
+        const Media = await response.json();
+        //console.log(Media[Media.length - 1].filename)
+        stamp = Media[Media.length - 1].aliases;
+
+        navigator.mediaDevices.getUserMedia(constraintObj)
+            .then(function (mediaStreamObj) {
+                //connect the media stream to the first video element
+                if ("srcObject" in video) {
+                    video.srcObject = mediaStreamObj;
+                } else {
+                    //old version
+                    video.src = window.URL.createObjectURL(mediaStreamObj);
+                }
+
+                video.onloadedmetadata = function (ev) {
+                    //show in the video element what is being captured by the webcam
+                    video.play();
+                };
+
+                //add listeners for saving video/audio
+                let start = document.getElementById('btnStart');
+                let stop = document.getElementById('btnStop');
+                let restart = document.getElementById('restartButton');
+                let signupButton = document.getElementById('signupButton');
+                let mediaRecorder = new MediaRecorder(mediaStreamObj);
+                let chunks = [];
+
+                start.addEventListener('click', (ev) => {
+                    mediaRecorder.start();
+                    console.log(mediaRecorder.state);
+                })
+                stop.addEventListener('click', (ev) => {
+                    mediaRecorder.stop();
+                    console.log(mediaRecorder.state);
+                    videoQuestion.src = "/media/datos_protegidos.mp4";
+                    videoQuestion.play();
+
+                });
+
+                restart.addEventListener('click', (ev) => {
+                    window.location.assign('signin.html');
+
+                });
+
+                signupButton.addEventListener('click', (ev) => {
+                    window.location.assign('login.html');
+
+                });
+
+                videoQuestion.addEventListener('playing', () => {
+                    start.disabled = true;
+                });
+
+                videoQuestion.addEventListener('ended', () => {
+                    if (videoLbel === "question") {
+                        start.disabled = false;
+                        videoLbel = "thanks";
+                    }
+
+                });
+
+
+                mediaRecorder.ondataavailable = function (ev) {
+                    chunks.push(ev.data);
+
+                }
+
+                mediaRecorder.onstart = (ev) => {
+                    start.disabled = true;
+                    stop.disabled = false;
+                    getEmotions = true;
+                    video.style.display = "inline";
+                }
+
+                mediaRecorder.onstop = async (ev) => {
+                    getEmotions = false;
+
+                    // For video recording and fetching
+                    stop.disabled = true;
+                    restart.style.display = 'inline';
+                    signupButton.style.display = 'inline';
+
+                    let blob = new Blob(chunks, { 'type': 'video/mp4;' });
+                    chunks = [];
+
+                    for (media of Media) {
+                        if (media.aliases == stamp && media.aliases != undefined) {
+                            var fd = new FormData();
+                            fd.append('upl', blob, `${media.filename.slice(0,-7)}.mp4`);
+
+                            const options = {
+                                method: 'POST',
+                                body: fd
+                            };
+                            await fetch('/api', options);
+                        }
+
+                    }
+                    /*
+                    var fd = new FormData();
+                    fd.append('upl', blob, `${users[users.length - 1].document}.mp4`);
+
+                    const options = {
+                        method: 'POST',
+                        body: fd
+                    };
+                    await fetch('/api', options);
+                    */
+                    // For data emotions gathering and fetching
+                    dataEmotions.neutral = neutralArray;
+                    dataEmotions.happy = happyArray;
+                    dataEmotions.angry = angryArray;
+                    dataEmotions.fearful = fearfulArray;
+                    dataEmotions.surprised = surprisedArray;
+                    dataEmotions.sad = sadArray;
+                    dataEmotions.disgusted = disgustedArray;
+
+                    const emotionOptions = {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(dataEmotions)
+                    };
+
+                    //await fetch('/emotions', emotionOptions);
+                }
+            })
+            .catch(function (err) {
+                console.log(err.name, err.message);
+            });
+
+    }
+
+    const neutralArray = [],
+        happyArray = [],
+        angryArray = [],
+        fearfulArray = [],
+        surprisedArray = [],
+        sadArray = [],
+        disgustedArray = [];
+
+
+    video.addEventListener('playing', () => {
+        const canvas = faceapi.createCanvasFromMedia(video)
+        div.appendChild(canvas);
+        const displaySize = { width: video.width, height: video.height }
+        faceapi.matchDimensions(canvas, displaySize)
+        setInterval(async () => {
+            const detections = await faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options()).withFaceExpressions().withAgeAndGender()
+            const resizedDetections = faceapi.resizeResults(detections, displaySize)
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height)
+            if (getEmotions) {
+                faceapi.draw.drawDetections(canvas, resizedDetections)
+                resizedDetections.forEach(result => {
+                    const { gender, genderProbability } = result
+                    new faceapi.draw.DrawTextField(
+                        [
+                            `${gender} (${round(genderProbability, 2)})`
+                        ],
+                        result.detection.box.topRight
+                    ).draw(canvas)
+                })
+
+                neutralArray.push(resizedDetections[0].expressions.neutral);
+                happyArray.push(resizedDetections[0].expressions.happy);
+                angryArray.push(resizedDetections[0].expressions.angry);
+                fearfulArray.push(resizedDetections[0].expressions.fearful);
+                surprisedArray.push(resizedDetections[0].expressions.surprised);
+                sadArray.push(resizedDetections[0].expressions.sad);
+                disgustedArray.push(resizedDetections[0].expressions.disgusted);
+
+            }
+
+        }, 100)
+    })
+
+    function round(num, prec) {
+        const f = Math.pow(10, prec)
+        return Math.floor(num * f) / f
+    }
+
+</script>
+
+</html>

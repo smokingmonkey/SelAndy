@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <title>Selección C&E: foto</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet">
+
+  <style>
+    .w3-montserrat {
+      font-family: "Montserrat", Sans-serif;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="w3-container w3-montserrat w3-center w3-light-grey w3-border w3-round">
+    <img src="/media/Logo Causa & Efecto.png" width="240" height="135">
+  </div>
+  <div class="w3-row-padding w3-padding-24">
+    <div class="w3-container w3-half">
+      <video id="video" class="w3-col w3-round-xlarge"></video>
+    </div>
+    <div class="w3-container w3-half w3-center">
+      <img src="/media/logo negro.png" id="photo" class="w3-round-xlarge">
+    </div>
+  </div>
+  <div class="w3-container w3-center w3-padding-16 w3-montserrat">
+    <button id="startbutton">Tomar foto<i class="w3-margin-left fa fa-camera"></i></button>
+    <button id="continueButton" style="display: none">Continuar<i
+        class="w3-margin-left fa fa-hand-o-right"></i></button>
+    <p id="message">Faltan 3 fotos.</p>
+    <canvas id="canvas" style="display: none"></canvas>
+  </div>
+
+
+</body>
+<script>
+  var streaming = false,
+    video = document.querySelector('#video'),
+    canvas = document.querySelector('#canvas'),
+    photo = document.querySelector('#photo'),
+    startbutton = document.querySelector('#startbutton'),
+    //continueButton = document.querySelector('#continueButton'),
+    message = document.querySelector('#message'),
+    width = 320,
+    height = 0,
+    counter = 3,
+    stamp;
+
+  let constraintObj = {
+    audio: false,
+    video: {
+      facingMode: "user",
+      width: { min: 320, ideal: 320, max: 640 },
+      height: { min: 240, ideal: 240, max: 480 }
+    }
+  };
+
+  navigator.mediaDevices.getUserMedia(constraintObj)
+    .then(async function (mediaStreamObj) {
+      //connect the media stream to the first video element
+
+      if ("srcObject" in video) {
+        video.srcObject = mediaStreamObj;
+      } else {
+        //old version
+        video.src = window.URL.createObjectURL(mediaStreamObj);
+      }
+
+      video.onloadedmetadata = function (ev) {
+        //show in the video element what is being captured by the webcam
+        video.play();
+      };
+
+      // Stamp for each user: for webApp works as a multiuser app 
+      const response = await fetch('/allusers');
+      const users = await response.json();
+      stamp = users[users.length - 1].timeStamp;
+
+      //console.log(stamp)
+
+    });
+
+  video.addEventListener('canplay', function (ev) {
+    if (!streaming) {
+      height = video.videoHeight / (video.videoWidth / width);
+      video.setAttribute('width', width);
+      video.setAttribute('height', height);
+      canvas.setAttribute('width', width);
+      canvas.setAttribute('height', height);
+      streaming = true;
+    }
+  }, false);
+
+  function takepicture() {
+
+    if (counter > 0) {
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+
+      canvas.toBlob(async function (blob) {
+        // For client visualizing 
+        var url = window.URL.createObjectURL(blob);
+
+        photo.onload = function () {
+          // no longer need to read the blob so it's revoked
+          window.URL.revokeObjectURL(url);
+        };
+
+        photo.src = url;
+
+        // For multiuser stuff
+        const response = await fetch('/allusers');
+        const users = await response.json();
+        for (user of users) {
+          if (user.timeStamp == stamp && user.timeStamp != undefined) {
+            // Towards data base
+            var fd = new FormData();
+            fd.append('upl', blob, `${user.document}(${counter + 1}).png`);
+            const options = {
+              method: 'POST',
+              body: fd
+            };
+            await fetch('/api', options);
+          }
+        }
+
+
+      }, 'image/png');
+
+      if (counter == 1) {
+        startbutton.disabled = true;
+        //continueButton.style.display = "inline";
+        message.style.display = "none";
+        window.location.assign('videoCapture.html');
+
+      }
+
+    }
+
+    counter--;
+    message.innerHTML = `Faltan ${counter} fotos.`
+
+  }
+
+  startbutton.addEventListener('click', function (ev) {
+    takepicture();
+    ev.preventDefault();
+  }, false);
+
+  /*
+  continueButton.addEventListener('click', () => {
+    window.location.assign('videoCapture.html');
+  });
+*/
+
+</script>
+
+</html>

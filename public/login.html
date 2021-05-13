@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <title>SELECCIÓN C&E: login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet">
+
+  <style>
+    canvas {
+      position: absolute;
+    }
+
+
+    .divimg {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+    }
+
+    .w3-montserrat {
+      font-family: "Montserrat", Sans-serif;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="w3-container w3-montserrat w3-center w3-light-grey w3-border w3-round">
+    <img src="/media/Logo Causa & Efecto.png" width="240" height="135">
+  </div>
+  <div class="w3-row-padding w3-padding-16">
+    <div class="w3-container w3-half">
+      <video id="video" class="w3-col" style="display: none"></video>
+      <video id="videoinfo" class="w3-col w3-round-xlarge w3-border" src="/media/pruebas.mp4" autoplay controls
+        controlsList="nodownload nofullscreen"></video>
+    </div>
+    <div class="w3-container w3-half divimg w3-padding-16">
+      <img src="" id="photo" class="w3-round-xlarge">
+      <canvas id="canvas" style="display: none"></canvas>
+    </div>
+  </div>
+  <div class="w3-container w3-center w3-padding-16 w3-montserrat">
+    <button id="loginButton" disabled>ingresar<i class="w3-margin-left fa fa-sign-in"></i></button>
+    <button id="startButton" style="display: none">Iniciar pruebas<i
+        class="w3-margin-left fa fa-flag-checkered"></i></button>
+    <button id="signupButton" style="display: none">Registrarse<i class="w3-margin-left fa fa-user-plus"></i></button>
+    <p id="message"></p>
+  </div>
+</body>
+<script src="face-api.min.js"></script>
+<script>
+  var labels = []
+
+  var streaming = false,
+    video = document.querySelector('#video'),
+    videoinfo = document.querySelector('#videoinfo'),
+    canvas = document.querySelector('#canvas'),
+    photo = document.querySelector('#photo'),
+    loginButton = document.querySelector('#loginButton'),
+    startButton = document.querySelector('#startButton'),
+    signupButton = document.querySelector('#signupButton'),
+    message = document.querySelector('#message'),
+    width = 320,
+    height = 0;
+
+  let constraintObj = {
+    audio: false,
+    video: {
+      facingMode: "user",
+      width: { min: 320, ideal: 320, max: 640 },
+      height: { min: 240, ideal: 240, max: 480 }
+    }
+  };
+
+  Promise.all([
+    faceapi.nets.faceRecognitionNet.loadFromUri('/weights'),
+    faceapi.nets.faceLandmark68Net.loadFromUri('/weights'),
+    faceapi.nets.ssdMobilenetv1.loadFromUri('/weights')
+  ]).then(start)
+
+  function loadLabeledImages() {
+    return Promise.all(
+      labels.map(async label => {
+        const descriptions = []
+        for (let i = 1; i <= 1; i++) {
+          const image = document.createElement('img');
+          image.style.display = "none";
+          image.src = await `http://localhost:5000/multimedia/${label[0]}(${i+2}).png`;
+          const detections = await faceapi.detectSingleFace(image).withFaceLandmarks().withFaceDescriptor()
+          descriptions.push(detections.descriptor)
+
+        }
+
+        return new faceapi.LabeledFaceDescriptors(label[1] + label[0], descriptions)
+      })
+    )
+  }
+
+  async function login() {
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+
+    canvas.toBlob(function (blob) {
+      // For client visualizing 
+      var url = window.URL.createObjectURL(blob);
+
+      photo.onload = function () {
+        // no longer need to read the blob so it's revoked
+        window.URL.revokeObjectURL(url);
+      };
+
+      photo.src = url;
+
+    });
+
+    try {
+      const labeledFaceDescriptors = await loadLabeledImages()
+      const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.6)
+      const displaySize = { width: photo.width, height: photo.height }
+      faceapi.matchDimensions(canvas, displaySize)
+      const detections = await faceapi.detectAllFaces(photo).withFaceLandmarks().withFaceDescriptors()
+      const resizedDetections = faceapi.resizeResults(detections, displaySize)
+      console.log(resizedDetections);
+      ////////////////////////////////////////////
+      const results = resizedDetections.map(d => faceMatcher.findBestMatch(d.descriptor))
+      results.forEach((result, i) => {
+        console.log(result)
+        const box = resizedDetections[i].detection.box
+        const drawBox = new faceapi.draw.DrawBox(box, { label: result.toString().match(/^[a-zA-Z\sA-zÀ-ú]+/g).join() })
+        drawBox.draw(canvas)
+      })
+
+      canvas.style.display = "block";
+
+      if (results[0].label == "desconocido") {
+        message.innerHTML = 'Debes registrarte primero';
+        signupButton.style.display = "inline";
+        loginButton.disabled = false;
+      } else {
+        signupButton.style.display = "none";
+        message.innerHTML = `¡Bienvenid@ ${results[0].label.match(/[a-zA-Z\sA-zÀ-ú]+/g).join()}!`;
+        //startButton.style.display = "inline";
+        loginButton.disabled = true;
+
+        const data = {
+          name: results[0].label.match(/[a-zA-Z\sA-zÀ-ú]+/g).join(),
+          pid: results[0].label.match(/\d+/g).join()
+        };
+
+        const options = {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        };
+
+        fetch('/signin', options);
+
+      }
+
+
+    } catch (error) {
+      message.innerText = "¿Y a ver la carita? Inténtalo de nuevo"
+      loginButton.disabled = false;
+
+    }
+    
+  }
+cedula = 1017223779
+  async function start() {
+    navigator.mediaDevices.getUserMedia(constraintObj)
+      .then(function (mediaStreamObj) {
+        //connect the media stream to the first video element
+
+        if ("srcObject" in video) {
+          video.srcObject = mediaStreamObj;
+        } else {
+          //old version
+          video.src = window.URL.createObjectURL(mediaStreamObj);
+        }
+
+        video.onloadedmetadata = function (ev) {
+          //show in the video element what is being captured by the webcam
+          video.play();
+        }
+
+      });
+
+    const response = await fetch(`/allusers/${cedula}(3).png`);
+    const users = await response.json();
+      
+    for (user of users) {
+      labels.push([user.document, user.name])
+    }
+
+  }
+
+
+  video.addEventListener('canplay', function (ev) {
+    if (!streaming) {
+      height = video.videoHeight / (video.videoWidth / width);
+      video.setAttribute('width', width);
+      video.setAttribute('height', height);
+      canvas.setAttribute('width', width);
+      canvas.setAttribute('height', height);
+      streaming = true;
+    }
+
+  }, false);
+
+  videoinfo.addEventListener('ended', (ev) => {
+    loginButton.disabled = false;
+
+  });
+
+  videoinfo.addEventListener('playing', (ev) => {
+    loginButton.disabled = true;
+  });
+
+  loginButton.addEventListener('click', function (ev) {
+    message.innerHTML = 'Cargando la base de datos...'
+    loginButton.disabled = true;
+    login();
+    ev.preventDefault();
+  }, false);
+
+  startButton.addEventListener('click', (ev) => {
+    window.location.assign('batak.html');
+  });
+
+  signupButton.addEventListener('click', (ev) => {
+    window.location.assign('signin.html');
+  });
+
+
+
+</script>
+
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selección C&E: Inicio_Andyyyy</title>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet">
+    <style>
+        .w3-montserrat {
+            font-family: 'Montserrat', sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="w3-container w3-montserrat w3-center w3-light-grey w3-border w3-round">
+        <img src="/media/Logo Causa & Efecto.png" width="480" height="270">
+    </div>
+    <div class="w3-container w3-montserrat w3-center w3-padding-64">
+        <button id="signin" style="display: inline">Registrarse<i class="w3-margin-left fa fa-user-plus"></i></button>
+        <button id="login" style="display: inline">Iniciar sesión<i class="w3-margin-left fa fa-sign-in"></i></button>
+    </div>
+    <div class="w3-container w3-center w3-light-grey w3-border w3-round">
+        <h1 class="w3-montserrat">Selección C&E</h1>
+    </div>
+</body>
+<script>
+    const signinButton = document.getElementById('signin');
+    const loginButton = document.getElementById('login');
+
+    signinButton.addEventListener('click', ()=>{
+        window.location.assign('signin.html');
+    });
+
+    loginButton.addEventListener('click', ()=>{
+        window.location.assign('login.html');
+    });
+</script>
+
+</html>
